@@ -99,14 +99,14 @@ def keyPressed(*args):
     # > (on numpad)
     if ord(args[0]) == 54:
         frame = frame + 1
-        print "frame %s" % frame
+        print("frame %s" % frame)
         skeleton.updateFrame(frame)
         return
         
     # < (on numpad)
     if ord(args[0]) == 52:
         frame = frame - 1
-        print "frame %s" % frame
+        print("frame %s" % frame)
         skeleton.updateFrame(frame)
         return
     
@@ -124,7 +124,7 @@ def drawBVHRig(skeleton):
 def drawJoint(joint):
     pos = getPosition(joint)
     #if pos[0] == pos[1] == pos[2] == 0:
-    #    print joint.name
+    #    print(joint.name)
     RADIUS = 0.15
 
     glPushMatrix()
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     skeleton.updateFrame(frame)
 
 
-    print "Hit ESC key to quit."
+    print("Hit ESC key to quit.")
 
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)

@@ -62,14 +62,14 @@ class Joint:
 
 
   def info(self):
-    print "Joint name:", self.name
-    print " %s is connected to " % self.name,
+    print("Joint name:", self.name)
+    print(" %s is connected to " % self.name)
     if(len(self.children) == 0):
-        print "nothing"
+        print("nothing")
     else:
       for child in self.children:
-        print "%s " % child.name,
-      print
+        print("%s " % child.name)
+      print()
     for child in self.children:
       child.info()
 
