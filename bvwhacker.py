@@ -22,14 +22,15 @@ class WxGLTest(GLCanvas):
     def __init__(self, parent):
         GLCanvas.__init__(self, parent,-1, 
                           attribList=[wx.glcanvas.WX_GL_DOUBLEBUFFER])
-        wx.EVT_PAINT(self, self.OnDraw)
-        wx.EVT_SIZE(self, self.OnSize)
-        wx.EVT_MOTION(self, self.OnMouseMotion)
+        self.context = wx.glcanvas.GLContext(self)
+        self.Bind(wx.EVT_PAINT, self.OnDraw)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
         self.Bind(wx.EVT_LEFT_DOWN, self.OnMouseDown)
         self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
         self.Bind(wx.EVT_RIGHT_DOWN, self.OnMouseDown)
         self.Bind(wx.EVT_RIGHT_UP, self.OnMouseUp)
-        wx.EVT_WINDOW_DESTROY(self, self.OnDestroy)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
         
         self.init = True
 
@@ -43,7 +44,7 @@ class WxGLTest(GLCanvas):
 
 
     def OnDraw(self,event):
-        self.SetCurrent()
+        self.SetCurrent(self.context)
 
         if self.init:
             self.InitGL()
@@ -85,7 +86,6 @@ class WxGLTest(GLCanvas):
 
         glFlush()
         self.SwapBuffers()
-        #print "drawn"
 
         return
         
@@ -126,7 +126,6 @@ class WxGLTest(GLCanvas):
         self.Update()
 
     def OnMouseDown(self, evt):
-        #print "Mouse down"
         if evt.LeftIsDown():
             self.mouseDown = True
             self.rMouseDown = False
@@ -150,18 +149,67 @@ class WxGLTest(GLCanvas):
         #print "Mouse moved (%s, %s)" % (self.x, self.y)
 
     def OnDestroy(self, event):
-        print "Destroying Window"
+        #print "Destroying Window"
+        pass
 
-
-def sliderUpdate(event):
-    fr = slider.GetValue()
+def updateFrame(fr):
     bvwhacker_base.frame = fr
     bvwhacker_base.skeleton.updateFrame(fr, 0.1)
-    status.SetLabel("frame: %s/%s" % ( bvwhacker_base.frame, 
-                         len(bvwhacker_base.skeleton.root.frames) ))
+    status.SetLabel("frame: %s/%s" % ( bvwhacker_base.frame, len(bvwhacker_base.skeleton.root.frames) ))
     canvas.Refresh()
     canvas.Update()
 
+def sliderUpdate(event):
+    fr = slider.GetValue()
+    updateFrame(fr)
+
+def onToggle(event):
+    btn = event.GetEventObject().GetLabel() 
+    if timer.IsRunning():
+        timer.Stop()
+        playBtn.SetLabel("Play")
+    else:
+        timer.Start(100)
+        playBtn.SetLabel("Stop")
+
+def changeFrame(offset):
+    fr = slider.GetValue()
+    min = slider.GetMin()
+    max = slider.GetMax()
+    if offset > 0:
+        if fr+offset == max:
+            slider.SetValue(min+offset-1)
+        elif fr+offset < max:
+            slider.SetValue(fr+offset)
+        else:
+            slider.SetValue(min)
+    else:
+        if fr+offset == min:
+            slider.SetValue(max+offset-1)
+        elif fr+offset > min:
+            slider.SetValue(fr+offset)
+        else:
+            slider.SetValue(max)
+    fr = slider.GetValue()
+    updateFrame(fr)
+
+def onClicked(event):
+    label = event.GetEventObject().GetLabel() 
+    if event.Id == beginBtn.Id:
+        min = slider.GetMin()
+        updateFrame(min)
+        slider.SetValue(min)
+    elif event.Id == frameBackBtn.Id:
+        changeFrame(-1)
+    elif event.Id == frameFwdBtn.Id:
+        changeFrame(+1)
+    elif event.Id == endBtn.Id:
+        max = slider.GetMax()
+        updateFrame(max)
+        slider.SetValue(max)
+
+def onTimer(event):
+    changeFrame(+10)
 
 if __name__ == '__main__':
 
@@ -169,29 +217,35 @@ if __name__ == '__main__':
 
     res = xrc.XmlResource('gui/bvwhacker_gui.xrc')
     frame = res.LoadFrame(None, 'BVwHacker')
-    #panel = res.LoadPanel(frame, "BVhWhackerPanel")
 
-    #canvasPanel = xrc.XRCCTRL(frame, 'oGLCanvasPanel')
     canvas = WxGLTest(frame)
     canvas.SetSize((640,480))
 
-    #frame.SetSize((640,480))
-
-    bvwhacker_base.frame = -1
+    bvwhacker_base.frame = 1
     bvwhacker_base.skeleton = bvwhacker_base.bvh.Skeleton("cmu_mb_01_01.bvh", 0.25)
     bvwhacker_base.skeleton.updateFrame(frame)
-
-    slider = xrc.XRCCTRL(frame, 'frameSlider')
-    print slider
-    print xrc.XRCCTRL(frame, 'beginBtn')
-    print xrc.XRCCTRL(frame, 'frameLbl')
-    slider.SetMin(-1)
-    slider.SetMax(len(bvwhacker_base.skeleton.root.frames))
-    frame.Bind(wx.EVT_SLIDER, sliderUpdate)
 
     status = xrc.XRCCTRL(frame, 'frameLbl')
     status.SetLabel("frame: %s/%s" % ( bvwhacker_base.frame, 
                          len(bvwhacker_base.skeleton.root.frames) ))
+
+    timer = wx.Timer(frame)
+    frame.Bind(wx.EVT_TIMER, onTimer, timer)
+
+    slider = xrc.XRCCTRL(frame, 'frameSlider')
+    slider.SetMin(1)
+    slider.SetMax(len(bvwhacker_base.skeleton.root.frames))
+    slider.SetValue(1)
+
+    frame.Bind(wx.EVT_SLIDER, sliderUpdate)
+    frame.Bind(wx.EVT_TOGGLEBUTTON, onToggle)
+    frame.Bind(wx.EVT_BUTTON, onClicked)
+
+    playBtn = xrc.XRCCTRL(frame, 'playBtn')
+    beginBtn = xrc.XRCCTRL(frame, 'beginBtn')
+    frameBackBtn = xrc.XRCCTRL(frame, 'frameBackBtn')
+    frameFwdBtn = xrc.XRCCTRL(frame, 'frameFwdBtn')
+    endBtn = xrc.XRCCTRL(frame, 'endBtn')
 
     frame.Show()
     app.MainLoop()
