@@ -16,6 +16,7 @@ from wx.glcanvas import GLCanvas
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
+import sys
 import bvwhacker_base 
 
 class WxGLTest(GLCanvas):
@@ -221,8 +222,13 @@ if __name__ == '__main__':
     canvas = WxGLTest(bvhframe)
     canvas.SetSize((640,480))
 
+    bvhfile = "cmu_mb_01_01.bvh"
+    if len(sys.argv) == 2:
+        bvhfile = str(sys.argv[1])
+    bvhframe.SetTitle(bvhfile)
+
     bvwhacker_base.frame = 1
-    bvwhacker_base.skeleton = bvwhacker_base.bvh.Skeleton("cmu_mb_01_01.bvh", 0.25)
+    bvwhacker_base.skeleton = bvwhacker_base.bvh.Skeleton(bvhfile, 0.25)
     bvwhacker_base.skeleton.updateFrame(1)
 
     status = xrc.XRCCTRL(bvhframe, 'frameLbl')
