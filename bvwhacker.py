@@ -26,25 +26,26 @@ class WxGLTest(GLCanvas):
         self.context = wx.glcanvas.GLContext(self)
         self.Bind(wx.EVT_PAINT, self.OnDraw)
         self.Bind(wx.EVT_SIZE, self.OnSize)
-        self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
-        self.Bind(wx.EVT_LEFT_DOWN, self.OnMouseDown)
-        self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
-        self.Bind(wx.EVT_RIGHT_DOWN, self.OnMouseDown)
-        self.Bind(wx.EVT_RIGHT_UP, self.OnMouseUp)
-        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnDestroy)
-        
+        self.Bind(wx.EVT_MOTION, self.OnMotion)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+        self.Bind(wx.EVT_MIDDLE_DOWN, self.OnMiddleDown)
+        self.Bind(wx.EVT_MIDDLE_UP, self.OnMiddleUp)
+        self.Bind(wx.EVT_RIGHT_DOWN, self.OnRightDown)
+        self.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
+        self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnWindowDestroy)
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnCharHook)
+
         self.init = True
 
         # initial mouse position
         self.lastx = self.x = 30
         self.lasty = self.y = 30
         self.mouseDown = False
-        self.rMouseDown = False
-
-        self.size = None
 
 
-    def OnDraw(self,event):
+    def OnDraw(self, event):
         self.SetCurrent(self.context)
 
         if self.init:
@@ -60,9 +61,8 @@ class WxGLTest(GLCanvas):
 
         # Mouse camera rotation
         if self.mouseDown:
-            if self.size is None:
-                self.size = self.GetClientSize()
-            w, h = self.size
+            size = self.GetClientSize()
+            w, h = size
             w = max(w, 1.0)
             h = max(h, 1.0)
             xScale = 180.0 / w
@@ -72,14 +72,6 @@ class WxGLTest(GLCanvas):
             #print("Rotated camera (%s, %s)" % (rotX, rotY))
             glRotatef(rotY, 1.0, 0.0, 0.0)
             glRotatef(rotX, 0.0, 1.0, 0.0)
-        elif self.rMouseDown:
-            if self.size is None:
-                self.size = self.GetClientSize()
-            _, h = self.size
-            h = max(h, 1.0)
-            yScale = 10.0 / h
-            zoomY = (self.y - self.lasty) * yScale
-            glTranslatef(0.0, 0.0, zoomY)
 
         # Draw skeleton
         bvwhacker_base.drawFloorPlane(-20, 20, 10, -5, True)
@@ -87,9 +79,6 @@ class WxGLTest(GLCanvas):
 
         glFlush()
         self.SwapBuffers()
-
-        return
-        
 
 
     def InitGL(self):
@@ -114,7 +103,6 @@ class WxGLTest(GLCanvas):
 
 
     def OnSize(self, event):
-
         try:
             width, height = event.GetSize()
         except:
@@ -126,32 +114,53 @@ class WxGLTest(GLCanvas):
         self.Refresh()
         self.Update()
 
-    def OnMouseDown(self, evt):
-        if evt.LeftIsDown():
-            self.mouseDown = True
-            self.rMouseDown = False
-        elif evt.RightIsDown():
-            self.rMouseDown = True
-            self.mouseDown = False
+    def DragDown(self, evt):
+        self.mouseDown = True
         self.CaptureMouse()
         self.x, self.y = self.lastx, self.lasty = evt.GetPosition()
 
-    def OnMouseUp(self, evt):
-        #print("Mouse up")
+    def DragUp(self, evt):
         self.mouseDown = False
-        self.rMouseDown = False
-        self.ReleaseMouse()
+        if self.HasCapture():
+            self.ReleaseMouse()
 
-    def OnMouseMotion(self, evt):
-        if evt.Dragging() and (evt.LeftIsDown() or evt.RightIsDown()):
+    def OnLeftDown(self, evt):
+        self.DragDown(evt)
+
+    def OnLeftUp(self, evt):
+        self.DragUp(evt)
+
+    def OnMiddleDown(self, evt):
+        self.DragDown(evt)
+
+    def OnMiddleUp(self, evt):
+        self.DragUp(evt)
+
+    def OnRightDown(self, evt):
+        self.DragDown(evt)
+
+    def OnRightUp(self, evt):
+        self.DragUp(evt)
+
+    def OnMouseWheel(self, evt):
+        wheel = evt.GetWheelRotation()
+        glTranslatef(0.0, 0.0, wheel/10)
+        self.Refresh(False)
+
+    def OnMotion(self, evt):
+        if evt.Dragging():
             self.lastx, self.lasty = self.x, self.y
             self.x, self.y = evt.GetPosition()
             self.Refresh(False)
-        #print("Mouse moved (%s, %s)" % (self.x, self.y))
 
-    def OnDestroy(self, event):
+    def OnWindowDestroy(self, event):
         #print("Destroying Window")
         pass
+
+    def OnCharHook(self, evt):
+        if 81 == evt.GetKeyCode(): # Q
+            sys.exit(0)
+
 
 def canvasUpdateFrame(fr):
     bvwhacker_base.frame = fr
